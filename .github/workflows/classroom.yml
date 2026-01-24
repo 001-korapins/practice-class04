@@ -1,0 +1,216 @@
+name: GitHub Classroom Autograding
+
+on:
+  push:
+    branches:
+      - 'class04'
+  workflow_dispatch:
+
+permissions:
+  checks: write
+  actions: read
+  contents: write
+
+jobs:
+  run-autograding-tests:
+    if: github.actor != 'github-classroom[bot]' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+# --------------------------------------------------------------------------
+    # Test 1: Main Branch Checks (10 Points)
+    # --------------------------------------------------------------------------
+      - name: 'Test 1: Expect Main branch to be unchanged'
+        id: test-1
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: 'Test 1: Expect Main branch to be unchanged'
+          setup-command: ''
+          command: |
+            export GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+            export ORG_TOKEN=${{ secrets.ORG_TEMPLATE_READER_TOKEN }}
+            export TEMPLATE_TOKEN=${ORG_TOKEN:-$GH_TOKEN}
+            DEFAULT_TEMPLATE_URL="https://github.com/IT-BANGMOD-INT142-2025/int142-2025-class04-template-class04.git"
+
+            git config --global url."https://oauth2:${TEMPLATE_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+            # Get parent repo URL (for forks) or template repo URL (for templates)
+            DETECTED_URL=$(gh repo view --json templateRepository,parent --template '{{if .templateRepository}}{{.templateRepository.url}}{{else if .parent}}https://github.com/{{.parent.owner.login}}/{{.parent.name}}.git{{end}}' 2>/dev/null || echo "")
+
+            TEMPLATE_URL="${DETECTED_URL:-$DEFAULT_TEMPLATE_URL}"
+            
+            git remote add template "$TEMPLATE_URL" 2>/dev/null || git remote set-url template "$TEMPLATE_URL"
+            git fetch template main > /dev/null 2>&1 || {
+              echo "DETECTED_URL = $DETECTED_URL"
+              echo "TEMPLATE_URL = $TEMPLATE_URL"
+              echo "⚠️ Unable to fetch main branch from template/parent repository."
+              echo "  Skipping test."
+              exit 0
+            }
+            
+            NON_BOT_COMMITS=$(git log template/main..HEAD --format='%an' | grep -v "github-classroom\[bot\]" | grep -v "GitHub Classroom")
+
+            if [ -n "$NON_BOT_COMMITS" ]; then
+              echo "❌ Main branch modification detected!"
+              echo "   The following unauthorized authors pushed to main:"
+              echo "$NON_BOT_COMMITS"
+              exit 1
+            else
+              echo "✅ Main branch is valid."
+            fi
+          timeout: 1
+          max-score: 10
+
+      # --------------------------------------------------------------------------
+      # Test 2: Branch Existence (10 Points)
+      # --------------------------------------------------------------------------
+      - name: 'Test 2: Class04 branch exists'
+        id: test-2
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: 'Test 2: Class04 branch exists'
+          setup-command: ''
+          command: |
+            if git show-ref --quiet refs/remotes/origin/class04; then
+              echo "✅ Branch class04 found."
+            else
+              echo "❌ Branch class04 not found on remote."
+              exit 1
+            fi
+          timeout: 1
+          max-score: 10
+
+    # --------------------------------------------------------------------------
+    # Test 3: Commit 'Add index.html from class02' (30 Points)
+    # --------------------------------------------------------------------------
+      - name: 'Test 3: Commit "Add index.html from class02"'
+        id: test-3
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: 'Test 3: Commit "Add index.html from class02"'
+          setup-command: ''
+          command: |
+            COMMIT=$(git log origin/class04 --grep="Add index.html from class02" --format=%H -n 1)
+            if [ -z "$COMMIT" ]; then echo "❌ Commit not found"; exit 1; fi
+            
+            AUTHOR=$(git show -s --format='%an' $COMMIT)
+            EMAIL=$(git show -s --format='%ae' $COMMIT)
+            CONTENT=$(git show $COMMIT:index.html || echo "")
+            
+            # Check H1 content
+            if ! (printf "%s" "$CONTENT" | grep -q "<h1>INT142 Software Development Tools</h1>"); then echo "❌ Missing H1 tag"; exit 1; fi
+            
+            # Check Author/Email
+            EXPECTED_REGEX="^[A-Za-z]+[[:space:]]+[A-Za-z]+[[:space:]]*\(INT142-class04\)$"
+            if ! (echo "$AUTHOR" | grep -qE "$EXPECTED_REGEX"); then echo "❌ Wrong Author: $AUTHOR"; exit 1; fi
+            if ! (echo "$EMAIL" | grep -qE "@users.noreply.github.com$"); then echo "❌ Wrong Email: $EMAIL"; exit 1; fi
+            
+            # Compare files to Main
+            HASH_RM_MAIN=$(git rev-parse origin/main:README.md)
+            HASH_RM_CURR=$(git rev-parse $COMMIT:README.md)
+            if [ "$HASH_RM_MAIN" != "$HASH_RM_CURR" ]; then echo "❌ README modified"; exit 1; fi
+
+            HASH_CLASSROOM_MAIN=$(git rev-parse origin/main:.github/workflows/classroom.yml)
+            HASH_CLASSROOM_CURR=$(git rev-parse $COMMIT:.github/workflows/classroom.yml)
+            if [ "$HASH_CLASSROOM_MAIN" != "$HASH_CLASSROOM_CURR" ]; then echo "❌ classroom.yml modified"; exit 1; fi
+            
+            if ! (printf "%s" "$CONTENT" | grep -q "<title>Class 02 Exercise 2</title>"); then echo "❌ Missing '<title>Class 02 Exercise 2</title>'"; exit 1; fi
+            if ! (printf "%s" "$CONTENT" | grep -q "<h1 id=\"class\">Class 02 Exercise 2</h1>"); then echo "❌ Missing '<h1 id=\"class\">Class 02 Exercise 2</h1>'"; exit 1; fi
+
+            # If there is no commit "Update index.html to class04 by GitHub Actions" after this commit, replace index.html with .github/src/index.html and make a commit
+            COMMIT=$(git log origin/class04 --grep="Update index.html to class04 by GitHub Actions" --format=%H -n 1)
+            if [ -z "$COMMIT" ]; then 
+              echo "Update index.html to class04 by GitHub Actions"
+              git checkout -B class04 origin/class04
+              cp .github/src/index.html index.html
+              git add index.html
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git commit -m "Update index.html to class04 by GitHub Actions"
+              git push origin HEAD:class04
+            fi
+
+            echo "✅ Passed"
+          timeout: 1
+          max-score: 30
+
+    # --------------------------------------------------------------------------
+    # Test 4: Commit 'Update index.html line 19' (10 Points)
+    # --------------------------------------------------------------------------
+      - name: 'Test 4: Commit "Update index.html line 19"'
+        id: test-4
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: 'Test 4: Commit "Update index.html line 19"'
+          setup-command: ''
+          command: |
+            COMMIT=$(git log origin/class04 --grep="Update index.html line 19" --format=%H -n 1)
+            if [ -z "$COMMIT" ]; then echo "❌ Commit not found"; exit 1; fi
+
+            CONTENT=$(git show $COMMIT:index.html || echo "")
+            AUTHOR=$(git show -s --format='%an' $COMMIT)
+            EMAIL=$(git show -s --format='%ae' $COMMIT)
+
+            if ! (printf "%s" "$CONTENT" | grep -q "<title>Class 02 Exercise 2</title>"); then echo "❌ Missing '<title>Class 02 Exercise 2</title>'"; exit 1; fi
+            if ! (printf "%s" "$CONTENT" | grep -q "<h1 id=\"class\">Class 02 Exercise 2</h1>"); then echo "❌ Missing '<h1 id=\"class\">Class 02 Exercise 2</h1>'"; exit 1; fi
+            if ! (printf "%s" "$CONTENT" | grep -q "This page was pulled from class02 repository."); then echo "❌ Missing 'This page was pulled from class02 repository.'"; exit 1; fi
+            if (printf "%s" "$CONTENT" | grep -q "locally"); then echo "❌ Still contains 'This page was created locally and pushed to GitHub Classroom.'"; exit 1; fi
+            
+            EXPECTED_REGEX="^[A-Za-z]+[[:space:]]+[A-Za-z]+[[:space:]]*\(INT142-class04\)$"
+            if ! (echo "$AUTHOR" | grep -qE "$EXPECTED_REGEX"); then echo "❌ Wrong Author: $AUTHOR"; exit 1; fi
+            if ! (echo "$EMAIL" | grep -qE "@users.noreply.github.com$"); then echo "❌ Wrong Email: $EMAIL"; exit 1; fi
+             
+            echo "✅ Passed"
+          timeout: 1
+          max-score: 10
+
+    # --------------------------------------------------------------------------
+    # Test 5: Merge Commit (30 Points)
+    # --------------------------------------------------------------------------
+      - name: 'Test 5: Merge commit exists and valid'
+        id: test-5
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: 'Test 5: Merge commit exists and valid'
+          setup-command: ''
+          command: |
+            MERGE_COMMIT=$(git log origin/class04 --merges -n 1 --format=%H)
+            if [ -z "$MERGE_COMMIT" ]; then echo "❌ No merge commit found on class04"; exit 1; fi
+
+            CONTENT=$(git show $MERGE_COMMIT:index.html || echo "")
+            AUTHOR=$(git show -s --format='%an' $MERGE_COMMIT)
+            EMAIL=$(git show -s --format='%ae' $MERGE_COMMIT)
+
+            if ! (printf "%s" "$CONTENT" | grep -q "<title>Class 04</title>"); then echo "❌ Missing '<title>Class 04</title>'"; exit 1; fi
+            if ! (printf "%s" "$CONTENT" | grep -q "<h1 id=\"class\">Class 04</h1>"); then echo "❌ Missing '<h1 id=\"class\">Class 04</h1>'"; exit 1; fi
+            if ! (printf "%s" "$CONTENT" | grep -q "This page was pulled from class02 repository."); then echo "❌ Missing 'This page was pulled from class02 repository.'"; exit 1; fi
+            EXPECTED_REGEX="id=\"student-name\">[[:space:]]*[A-Za-z]+[[:space:]]+[A-Za-z]+[[:space:]]*<\/h2>"
+            if ! (echo "$CONTENT" | grep -qE "$EXPECTED_REGEX"); then echo "❌ Missing student fullname"; exit 1; fi
+            if (printf "%s" "$CONTENT" | grep -q "This page was modified by GitHub Actions."); then echo "❌ Still contains 'This page was modified by GitHub Actions.' H1"; exit 1; fi
+            if (printf "%s" "$CONTENT" | grep -q "Replace This With Your Name"); then echo "❌ Still contains 'Replace This With Your Name'"; exit 1; fi
+            if (printf "%s" "$CONTENT" | grep -q "locally"); then echo "❌ Still contains 'This page was created locally and pushed to GitHub Classroom.'"; exit 1; fi
+            EXPECTED_REGEX="^[A-Za-z]+[[:space:]]+[A-Za-z]+[[:space:]]*\(INT142-class04\)$"
+            if ! (echo "$AUTHOR" | grep -qE "$EXPECTED_REGEX"); then echo "❌ Wrong Author: $AUTHOR"; exit 1; fi
+            if ! (echo "$EMAIL" | grep -qE "@users.noreply.github.com$"); then echo "❌ Wrong Email"; exit 1; fi
+
+            echo "✅ Passed"
+          timeout: 1
+          max-score: 30
+
+    # --------------------------------------------------------------------------
+    # Final Scoring Reporter
+    # --------------------------------------------------------------------------
+      - name: Autograding Reporter
+        uses: classroom-resources/autograding-grading-reporter@v1
+        env:
+          TEST-1_RESULTS: "${{steps.test-1.outputs.result}}"
+          TEST-2_RESULTS: "${{steps.test-2.outputs.result}}"
+          TEST-3_RESULTS: "${{steps.test-3.outputs.result}}"
+          TEST-4_RESULTS: "${{steps.test-4.outputs.result}}"
+          TEST-5_RESULTS: "${{steps.test-5.outputs.result}}"
+        with:
+          runners: test-1,test-2,test-3,test-4,test-5
