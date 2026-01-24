@@ -113,7 +113,7 @@ test3 () {
     # If there is no commit "Update index.html to class04 by GitHub Actions" after this commit, replace index.html with .github/src/index.html and make a commit
     COMMIT=$(git log origin/class04 --grep="Update index.html to class04 by GitHub Actions" --format=%H -n 1)
     if [ -z "$COMMIT" ]; then 
-        printf "\nGo to GitHub Actions and run the workflow manually!"
+        printf "\nCheck on GitHub that new commit 'Update index.html to class04 by GitHub Actions' is created.\n"
     fi
 }
 
