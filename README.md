@@ -60,7 +60,7 @@ In this class, you will create a new branch `class04` and work on this branch in
     ┌────────────────────┬─────────────┬─────────────┐
     │ Test Runner Name   │ Test Score  │ Max Score   │
     ├────────────────────┼─────────────┼─────────────┤
-    │ test-1             │ 0           │ 10          │
+    │ test-1             │ 10          │ 10          │
     ├────────────────────┼─────────────┼─────────────┤
     │ test-2             │ 10          │ 10          │
     ├────────────────────┼─────────────┼─────────────┤
@@ -70,7 +70,7 @@ In this class, you will create a new branch `class04` and work on this branch in
     ├────────────────────┼─────────────┼─────────────┤
     │ test-5             │ 0           │ 30          │
     ├────────────────────┼─────────────┼─────────────┤
-    │ Total:             │ 40          │ 90          │
+    │ Total:             │ 50          │ 90          │
     └────────────────────┴─────────────┴─────────────┘
     ```
 
@@ -154,6 +154,32 @@ In this class, you will create a new branch `class04` and work on this branch in
     </body>
     ```
 
+    ```bash
+    $ git diff --cached 
+    diff --git a/index.html b/index.html
+    index 1cde087..87966d1 100644
+    --- a/index.html
+    +++ b/index.html
+    @@ -3,7 +3,7 @@
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    -    <title>Class 02 Exercise 2</title>
+    +    <title>Class 04</title>
+        <style>
+            body { font-family: sans-serif; text-align: center; margin-top: 50px; }
+            .container { border: 1px solid #ccc; padding: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto; }
+    @@ -13,7 +13,7 @@
+    
+        <div class="container">
+            <h1>INT142 Software Development Tools</h1>
+    -        <h1 id="class">Class 02 Exercise 2</h1>
+    +        <h1 id="class">Class 04</h1>
+            <h2 id="student-name">Olarn Rojanapornpun</h2>
+            
+            <p>This page was pulled from class02 repository.</p>
+    ```
+
 7. Follow instructions in `git status` to complete the merge commit (with the default merge message) and push this merge commit to remote repository.
 
 8. In the initial version of this assignment, the full score is 80 since there is a problem with Test 1 script.
@@ -162,7 +188,7 @@ In this class, you will create a new branch `class04` and work on this branch in
     ┌────────────────────┬─────────────┬─────────────┐
     │ Test Runner Name   │ Test Score  │ Max Score   │
     ├────────────────────┼─────────────┼─────────────┤
-    │ test-1             │ 0           │ 10          │
+    │ test-1             │ 10          │ 10          │
     ├────────────────────┼─────────────┼─────────────┤
     │ test-2             │ 10          │ 10          │
     ├────────────────────┼─────────────┼─────────────┤
@@ -172,6 +198,6 @@ In this class, you will create a new branch `class04` and work on this branch in
     ├────────────────────┼─────────────┼─────────────┤
     │ test-5             │ 30          │ 30          │
     ├────────────────────┼─────────────┼─────────────┤
-    │ Total:             │ 80          │ 90          │
+    │ Total:             │ 90          │ 90          │
     └────────────────────┴─────────────┴─────────────┘
     ```

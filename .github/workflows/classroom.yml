@@ -52,7 +52,7 @@ jobs:
               exit 0
             }
             
-            NON_BOT_COMMITS=$(git log template/main..HEAD --format='%an' | grep -v "github-classroom\[bot\]" | grep -v "GitHub Classroom")
+            NON_BOT_COMMITS=$(git log template/main..origin/main --format='%an' | grep -v "github-classroom\[bot\]" | grep -v "GitHub Classroom")
 
             if [ -n "$NON_BOT_COMMITS" ]; then
               echo "❌ Main branch modification detected!"

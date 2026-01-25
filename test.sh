@@ -9,12 +9,7 @@ test1() {
     echo "Test 1: Expect Main branch to be unchanged (10 Points)"
     
     # Get template or parent repo URL
-    TEMPLATE_URL=$(gh repo view --json templateRepository,parent -q '{{if .templateRepository}}{{.templateRepository.url}}{{else if .parent}}{{.parent.url}}{{end}}' 2>/dev/null || echo "")
-    if [ -z "$TEMPLATE_URL" ]; then
-        echo "⚠️ Unable to determine template or parent repository."
-        echo "  Skipping test."
-        return 0
-    fi
+    TEMPLATE_URL="https://github.com/IT-BANGMOD-INT142-2025/practice-class04.git"
 
     git remote add template "$TEMPLATE_URL" 2>/dev/null || git remote set-url template "$TEMPLATE_URL"
     git fetch template main > /dev/null 2>&1 || {
@@ -23,7 +18,7 @@ test1() {
         return 0
     }
 
-    NON_BOT_COMMITS=$(git log template/main..HEAD --format='%an' | grep -v "github-classroom\[bot\]" | grep -v "GitHub Classroom")
+    NON_BOT_COMMITS=$(git log template/main..origin/main --format='%an' | grep -v "github-classroom\[bot\]" | grep -v "GitHub Classroom")
 
     if [ -n "$NON_BOT_COMMITS" ]; then
         echo "❌ Main branch modification detected!"
@@ -42,10 +37,10 @@ test2 () {
     printf "\n---------------------------------------------------\n"
     echo "Test 2: Branch Existence (10 Points) -- Stage 1 Step 3"
     
-    if git show-ref --quiet refs/remotes/origin/class04; then
+    if git show-ref --quiet --verify refs/heads/class04; then
         echo "✅ Branch class04 found."
     else
-        echo "❌ Branch class04 not found on remote."
+        echo "❌ Branch class04 not found."
         return 1
     fi
     
@@ -57,7 +52,7 @@ test3 () {
     printf "\n---------------------------------------------------\n"
     echo "Test 3: Commit 'Add index.html from class02' (30 Points) -- Stage 1 Step 7"
     
-    COMMIT=$(git log origin/class04 --grep="Add index.html from class02" --format=%H -n 1)
+    COMMIT=$(git log class04 --grep="Add index.html from class02" --format=%H -n 1 2>/dev/null)
     if [ -z "$COMMIT" ]; then 
         echo "❌ Commit not found"
         return 1
@@ -111,9 +106,10 @@ test3 () {
     TOTAL_SCORE=$((TOTAL_SCORE + 30))
 
     # If there is no commit "Update index.html to class04 by GitHub Actions" after this commit, replace index.html with .github/src/index.html and make a commit
-    COMMIT=$(git log origin/class04 --grep="Update index.html to class04 by GitHub Actions" --format=%H -n 1)
+    COMMIT=$(git log origin/class04 --grep="Update index.html to class04 by GitHub Actions" --format=%H -n 1 2>/dev/null)
     if [ -z "$COMMIT" ]; then 
         printf "\nCheck on GitHub that new commit 'Update index.html to class04 by GitHub Actions' is created.\n"
+        printf "If not, enable GitHub Actions for this repository and manually trigger the workflow.\n"
     fi
 }
 
@@ -122,7 +118,7 @@ test4 () {
     printf "\n---------------------------------------------------\n"
     echo "Test 4: Commit 'Update index.html line 19' (10 Points) -- Stage 2 Step 2"
     
-    COMMIT=$(git log origin/class04 --grep="Update index.html line 19" --format=%H -n 1)
+    COMMIT=$(git log class04 --grep="Update index.html line 19" --format=%H -n 1 2> /dev/null)
     if [ -z "$COMMIT" ]; then 
         echo "❌ Commit not found"
         return 1
@@ -167,7 +163,7 @@ test5 () {
     printf "\n---------------------------------------------------\n"
     echo "Test 5: Merge Commit (30 Points) -- Stage 2 Step 7"
     
-    MERGE_COMMIT=$(git log origin/class04 --merges -n 1 --format=%H)
+    MERGE_COMMIT=$(git log class04 --merges -n 1 --format=%H)
     if [ -z "$MERGE_COMMIT" ]; then 
         echo "❌ No merge commit found on class04"
         return 1
@@ -176,6 +172,7 @@ test5 () {
     CONTENT=$(git show $MERGE_COMMIT:index.html || echo "")
     AUTHOR=$(git show -s --format='%an' $MERGE_COMMIT)
     EMAIL=$(git show -s --format='%ae' $MERGE_COMMIT)
+    MESSAGE=$(git show -s --format='%s' $MERGE_COMMIT)
 
     if ! (printf "%s" "$CONTENT" | grep -q "<title>Class 04</title>"); then 
         echo "❌ Missing '<title>Class 04</title>'"
@@ -214,6 +211,10 @@ test5 () {
         echo "❌ Wrong Email"
         return 1
     fi
+    if ! (echo "$MESSAGE" | grep -q "Merge branch 'class04'"); then 
+        echo "❌ Wrong Merge Commit Message"
+        return 1
+    fi
 
     echo "✅ Test 5 Passed"
     TOTAL_SCORE=$((TOTAL_SCORE + 30))
@@ -224,11 +225,11 @@ test5 () {
 TOTAL_SCORE=0
 
 echo "Class 04 Resolve Conflicts in VCS Tests"
-test1 || (echo "Final Score: $TOTAL_SCORE" && exit 1)
-test2 || (echo "Final Score: $TOTAL_SCORE" && exit 1)
-test3 || (echo "Final Score: $TOTAL_SCORE" && exit 1)
-test4 || (echo "Final Score: $TOTAL_SCORE" && exit 1)
-test5 || (echo "Final Score: $TOTAL_SCORE" && exit 1)
+test1 || { echo "Final Score: $TOTAL_SCORE"; exit 1; }
+test2 || { echo "Final Score: $TOTAL_SCORE"; exit 1; }
+test3 || { echo "Final Score: $TOTAL_SCORE"; exit 1; }
+test4 || { echo "Final Score: $TOTAL_SCORE"; exit 1; }
+test5 || { echo "Final Score: $TOTAL_SCORE"; exit 1; }
 printf "\n---------------------------------------------------\n"
 echo "All tests passed!"
 echo "Final Score: $TOTAL_SCORE"
